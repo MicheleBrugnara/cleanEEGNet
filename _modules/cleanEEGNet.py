@@ -21,7 +21,7 @@ class cleanEEGNet(LightningModule):
         shadow = torch.zeros(x.shape[2]).to(p.device)
         for i_b, batch in enumerate(x):
             for i_e, epoch in enumerate(batch):
-                output[i_b,:] += self.mu * self.model.forward(epoch.view(1,1,epoch.shape[0],epoch.shape[1])) 
+                output[i_b,:] += self.model.forward(epoch.view(1,1,epoch.shape[0],epoch.shape[1])) 
                 
         output /= x.shape[1]
         return output
