@@ -27,8 +27,6 @@ trainer = pl.Trainer(gpus=1,
                     max_epochs=150,
                     callbacks=[checkpoint_callback],
                     num_sanity_val_steps=0,
-                    logger=wandb_logger
-
         )
 
 

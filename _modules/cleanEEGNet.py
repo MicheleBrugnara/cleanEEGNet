@@ -1,4 +1,5 @@
 from pytorch_lightning import LightningModule
+from torch._C import device
 from _modules.CNN_chocolate import ConvNet
 from loss import custom_loss
 import torchmetrics
@@ -10,24 +11,28 @@ from torch.autograd import Variable
 
 class cleanEEGNet(LightningModule):
     def __init__(self):
-        
         super().__init__()
         self.f1 = torchmetrics.classification.f_beta.F1()
         self.model = ConvNet()
-        self.num_features = 62
-        self.rnn = torch.nn.GRU(62,self.num_features,batch_first = True)
-
+        self.num_layers = 2
+        self.hidden_size = 62
+        self.input_size = 62
+        self.rnn = torch.nn.RNN(self.input_size,self.hidden_size,self.num_layers,batch_first = True)
 
     def forward(self, x):
-        conv_output = torch.zeros(x.shape[0],x.shape[1],x.shape[2]).to(p.device) # (n_batches, n_epochs ,n_channels)
-        h = torch.rand(1,x.shape[0],self.num_features).to(p.device)
+        conv_output = torch.zeros( x.shape[0],x.shape[1],x.shape[2]).to(p.device) # (n_batches, n_epochs ,n_channels)
+        h0 = torch.zeros(self.num_layers,x.shape[0],self.hidden_size).to(p.device)
+        
         for i_b, batch in enumerate(x):
             for i_e, epoch in enumerate(batch):
                 conv_output[i_b,i_e,:] = self.model.forward(epoch.view(1,1,epoch.shape[0],epoch.shape[1]))
 
-        output, hn = self.rnn(conv_output,h)
-        #print(hn,hn.shape)
-        return hn[0,:,:]
+        conv_output = torch.sigmoid(conv_output)
+        output,_ = self.rnn(conv_output,h0)
+        output = output[:,-1,:]
+        print(output)
+        return output
+
     
     def loss_fn(self, y_hat, y_target):
         loss = custom_loss()
@@ -45,8 +50,6 @@ class cleanEEGNet(LightningModule):
         label = label[:,:,1]
         output = self(x.float())       
         loss = self.loss_fn(output, label.int())
-        print("output: ", torch.sigmoid(output), "labels: ", label)
-
         pred = torch.round(torch.sigmoid(output))
         f1 = self.f1(torch.flatten(pred), torch.flatten(label).int())
 
