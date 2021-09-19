@@ -13,7 +13,7 @@ light_mod = cleanEEGNet().load_from_checkpoint("/home/mbrugnara/cleanEEGNet/best
  
 print(light_mod.model)
 
-f1_comp = torchmetrics.classification.f_beta.F1()
+f1_comp = torchmetrics.classification.f_beta.F1(num_classes = 1, average = 'macro')
 
 light_mod.eval()
 light_mod.freeze()
@@ -35,11 +35,10 @@ for mu in lin_range:
             input  = torch.from_numpy(zscore(epoch.cpu()))
             input = input.to(p.device)
             input = input.view(1,1,input.shape[0],input.shape[1])
-            print(input.shape)
             partial_output = light_mod(input)
             output = (t_mu * partial_output + (1 - t_mu) * output)
         
-        round_output = torch.round(output)
+        round_output = torch.round(torch.sigmoid(output))
         temp_f1 = f1_comp(round_output[0].cpu(), label[:,0].int())
         avg_f1.append(temp_f1)
     avg_f1 = sum(avg_f1)/len(avg_f1)

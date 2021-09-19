@@ -8,6 +8,7 @@ from scipy.stats import zscore
 import numpy as np
 import torchmetrics
 import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score
 
 test_path = "/data/disk0/volkan/mbrugnara/test_08OL/"
 
@@ -16,7 +17,7 @@ light_mod = cleanEEGNet().load_from_checkpoint("/home/mbrugnara/cleanEEGNet/best
  
 print(light_mod.model)
 
-f1_comp = torchmetrics.classification.f_beta.F1()
+f1_comp = torchmetrics.classification.f_beta.F1(num_classes = 1, average = 'macro')
 
 light_mod.eval()
 light_mod.freeze()
@@ -25,8 +26,11 @@ tests = EEGDataset(p.test_path)
 
 lin_range = np.arange(0, 1, 0.05)
 
-#mu = 0.3727
-mu = 0.75
+mu = 0.3335
+#mu = 0.75
+#mu = 0.35
+
+f1 = []
 
 for test in tests:
         x, label = test
@@ -39,6 +43,10 @@ for test in tests:
             partial_output = light_mod(input.view(1,1,input.shape[0],input.shape[1]))
             output = (t_mu * partial_output + (1 - t_mu) * output)
         
-        round_output = torch.round(output)
+        round_output = torch.round(torch.sigmoid(output))
         temp_f1 = f1_comp(round_output[0].cpu(), label[:,0].int())
         print(temp_f1)
+        f1.append(temp_f1)
+        #print(temp_f1)
+
+print(sum(f1)/len(f1))
